@@ -1,5 +1,5 @@
 <script setup>
-const carroImg = 'public/assets/carro.png';
+const carroImg = '/assets/carro.png';
 import { ref, onMounted } from "vue";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
