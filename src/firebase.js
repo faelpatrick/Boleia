@@ -35,8 +35,8 @@ export const loginGoogle = () => signInWithPopup(auth, provider);
 
 export const listenAuth = (cb) => onAuthStateChanged(auth, cb);
 
-export const updateUserPos = (uid, lat, lng, tipo) =>
-	set(ref(db, "users/" + uid), { lat, lng, tipo });
+export const updateUserPos = (uid, lat, lng, tipo, displayName) =>
+	set(ref(db, "users/" + uid), { lat, lng, tipo, displayName });
 
 export const listenUsers = (cb) =>
 	onValue(ref(db, "users"), snap => cb(snap.val() || {}));

@@ -57,7 +57,13 @@ function iniciarLocalizacao() {
     const lat = pos.coords.latitude;
     const lng = pos.coords.longitude;
 
-    updateUserPos(user.value.uid, lat, lng, tipo.value);
+    updateUserPos(
+      user.value.uid,
+      lat,
+      lng,
+      tipo.value,
+      user.value.displayName || ""
+    );
 
     // Centraliza o mapa na posição do usuário
     if (map) {
@@ -116,7 +122,6 @@ onMounted(() => {
 
       let markerColor = "green";
       if (u.tipo === "passageiro") markerColor = "#0093ac";
-      if (uid === user.value?.uid) markerColor = "red";
 
       // Extrair primeiro e último nome
       let nome = u.displayName;
