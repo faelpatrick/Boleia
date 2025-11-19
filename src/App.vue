@@ -1,4 +1,5 @@
 <script setup>
+const carroImg = 'public/assets/carro.png';
 import { ref, onMounted } from "vue";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
@@ -100,7 +101,7 @@ onMounted(() => {
       ]
     },
     center: [-8.381062, 41.602987],
-    zoom: 14
+    zoom: 11
   });
 
   async function atualizarMarcadores() {
@@ -121,8 +122,12 @@ onMounted(() => {
       if (!u.tipo) return;
 
       let markerColor = "green";
+      let isMotorista = false;
       if (u.tipo === "passageiro") markerColor = "#0093ac";
-
+      if (u.tipo === "motorista") {
+        markerColor = "green";
+        isMotorista = true;
+      }
       // Extrair primeiro e último nome
       let nome = u.displayName;
       // Se for o usuário logado e não houver displayName salvo, usa o local
@@ -156,20 +161,31 @@ onMounted(() => {
         label.style.padding = '1px 6px';
         label.style.borderRadius = '8px';
         label.style.boxShadow = '0 1px 4px #0002';
+        label.style.textTransform = 'capitalize';
         label.style.pointerEvents = 'auto';
 
         wrapper.appendChild(label);
 
-        // Cria o marker padrão manualmente
-        markerEl = document.createElement('div');
-        markerEl.className = 'custom-marker-dot';
-        markerEl.style.width = '24px';
-        markerEl.style.height = '24px';
-        markerEl.style.borderRadius = '50%';
-        markerEl.style.background = markerColor;
-        markerEl.style.border = '2px solid #fff';
-        markerEl.style.boxShadow = '0 1px 4px #0004';
-        markerEl.style.pointerEvents = 'auto';
+        if (isMotorista) {
+          markerEl = document.createElement('img');
+          markerEl.src = carroImg;
+          markerEl.style.width = '28px';
+          markerEl.style.height = '28px';
+          markerEl.style.objectFit = 'contain';
+          markerEl.style.display = 'block';
+          markerEl.style.margin = '0 auto';
+        } else {
+          markerEl = document.createElement('div');
+          markerEl.className = 'custom-marker-dot';
+          markerEl.style.width = '24px';
+          markerEl.style.height = '24px';
+          markerEl.style.borderRadius = '50%';
+          markerEl.style.background = markerColor;
+          markerEl.style.border = '2px solid #fff';
+          markerEl.style.boxShadow = '0 1px 4px #0004';
+          markerEl.style.pointerEvents = 'auto';
+          markerEl.style.textTransform = 'capitalize';
+        }
         wrapper.appendChild(markerEl);
 
         markers[uid] = new maplibregl.Marker({ element: wrapper, anchor: 'bottom' })
@@ -181,9 +197,37 @@ onMounted(() => {
       } else {
         markers[uid].setLngLat([u.lng, u.lat]);
         // Atualiza cor e nome se necessário
-        if (markers[uid]._color !== markerColor) {
-          markers[uid]._markerEl.style.background = markerColor;
-          markers[uid]._color = markerColor;
+        if (isMotorista) {
+          if (markers[uid]._markerEl.tagName !== 'IMG') {
+            // Troca para imagem se não for
+            const newImg = document.createElement('img');
+            newImg.src = carroImg;
+            newImg.style.width = '28px';
+            newImg.style.height = '28px';
+            newImg.style.objectFit = 'contain';
+            newImg.style.display = 'block';
+            newImg.style.margin = '0 auto';
+            markers[uid]._markerEl.replaceWith(newImg);
+            markers[uid]._markerEl = newImg;
+          }
+        } else {
+          if (markers[uid]._markerEl.tagName === 'IMG') {
+            // Troca para bolinha se não for
+            const newDot = document.createElement('div');
+            newDot.className = 'custom-marker-dot';
+            newDot.style.width = '24px';
+            newDot.style.height = '24px';
+            newDot.style.borderRadius = '50%';
+            newDot.style.background = markerColor;
+            newDot.style.border = '2px solid #fff';
+            newDot.style.boxShadow = '0 1px 4px #0004';
+            newDot.style.pointerEvents = 'auto';
+            newDot.style.textTransform = 'capitalize';
+            markers[uid]._markerEl.replaceWith(newDot);
+            markers[uid]._markerEl = newDot;
+          } else {
+            markers[uid]._markerEl.style.background = markerColor;
+          }
         }
         if (markers[uid]._label.innerText !== nome) {
           markers[uid]._label.innerText = nome;
@@ -217,12 +261,26 @@ async function fazerLogout() {
       </v-btn>
     </v-row>
 
-    <v-row justify="center" class="mt-4" v-if="user && !tipo">
-      <v-btn color="green" class="ma-2" @click="escolherTipo('motorista')">
+    <v-row justify="center" class="mt-4">
+      <v-btn
+      v-if="tipo !== 'motorista'"
+        :key="`tipo1-${tipo??0}`"
+        :color="`${tipo && tipo.value === 'motorista' ? 'grey' : 'green'}`"
+        class="ma-2"
+        :disabled="!user || (tipo && tipo.value === 'motorista')"
+        @click="() => { if (user && (!tipo || tipo.value !== 'motorista')) escolherTipo('motorista') }"
+      >
         Oferecer boleia
       </v-btn>
 
-      <v-btn style="background-color: #0093ac; color: #fff;" class="ma-2" @click="escolherTipo('passageiro')">
+      <v-btn
+      v-if="tipo !== 'passageiro'"
+        :key="`tipo2-${tipo??0}`"
+        :style="tipo && tipo.value === 'passageiro' ? 'background-color: #bdbdbd; color: #fff;' : 'background-color: #0093ac; color: #fff;'"
+        class="ma-2"
+        :disabled="!user || (tipo && tipo.value === 'passageiro')"
+        @click="() => { if (user && (!tipo || tipo.value !== 'passageiro')) escolherTipo('passageiro') }"
+      >
         Quero boleia
       </v-btn>
     </v-row>
