@@ -133,7 +133,7 @@ onMounted(() => {
       }
 
       // Criar elemento com nome acima do marker padrão
-      let wrapper, label;
+      let wrapper, label, markerEl;
       if (!markers[uid]) {
         wrapper = document.createElement('div');
         wrapper.style.display = 'flex';
@@ -155,32 +155,29 @@ onMounted(() => {
 
         wrapper.appendChild(label);
 
-        // Cria o marker padrão
-        const marker = new maplibregl.Marker({ color: markerColor })
-          .setLngLat([u.lng, u.lat])
-          .addTo(map);
-        // Adiciona o nome acima do marker
-        marker.getElement().style.marginTop = '0px';
-        wrapper.appendChild(marker.getElement());
+        // Cria o marker padrão manualmente
+        markerEl = document.createElement('div');
+        markerEl.className = 'custom-marker-dot';
+        markerEl.style.width = '24px';
+        markerEl.style.height = '24px';
+        markerEl.style.borderRadius = '50%';
+        markerEl.style.background = markerColor;
+        markerEl.style.border = '2px solid #fff';
+        markerEl.style.boxShadow = '0 1px 4px #0004';
+        markerEl.style.pointerEvents = 'auto';
+        wrapper.appendChild(markerEl);
 
-        // Adiciona o wrapper ao mapa como marker customizado
         markers[uid] = new maplibregl.Marker({ element: wrapper, anchor: 'bottom' })
           .setLngLat([u.lng, u.lat])
           .addTo(map);
         markers[uid]._color = markerColor;
         markers[uid]._label = label;
+        markers[uid]._markerEl = markerEl;
       } else {
         markers[uid].setLngLat([u.lng, u.lat]);
         // Atualiza cor e nome se necessário
         if (markers[uid]._color !== markerColor) {
-          // Não muda a cor do label, só do marker
-          // Precisa reconstruir o marker padrão se mudar tipo
-          const wrapper = markers[uid].getElement();
-          const oldMarker = wrapper.querySelector('.maplibregl-marker');
-          if (oldMarker) oldMarker.remove();
-          const newMarker = new maplibregl.Marker({ color: markerColor })
-            .setLngLat([u.lng, u.lat]);
-          wrapper.appendChild(newMarker.getElement());
+          markers[uid]._markerEl.style.background = markerColor;
           markers[uid]._color = markerColor;
         }
         if (markers[uid]._label.innerText !== nome) {
