@@ -1,5 +1,6 @@
 <script setup>
 const carroImg = '/assets/carro.png';
+const logoNavarra = '/assets/favicon.png';
 import { ref, onMounted } from "vue";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
@@ -87,7 +88,7 @@ onMounted(() => {
             "https://c.tile.openstreetmap.org/{z}/{x}/{y}.png"
           ],
           tileSize: 256,
-          attribution: "© OpenStreetMap"
+          attribution: "@faelpatrick"
         }
       },
       layers: [
@@ -101,7 +102,8 @@ onMounted(() => {
       ]
     },
     center: [-8.381062, 41.602987],
-    zoom: 11
+    zoom: 11,
+    logo: logoNavarra
   });
 
   async function atualizarMarcadores() {
@@ -116,10 +118,12 @@ onMounted(() => {
       }
     });
 
+    const agora = Date.now();
     Object.keys(users).forEach((uid) => {
       const u = users[uid];
-      // Só mostra quem tem tipo definido
+      // Só mostra quem tem tipo definido e está ativo (últimos 15s)
       if (!u.tipo) return;
+      if (!u.lastActive || agora - u.lastActive > 15000) return;
 
       let markerColor = "green";
       let isMotorista = false;
@@ -238,7 +242,7 @@ onMounted(() => {
   }
 
   atualizarMarcadores();
-  setInterval(atualizarMarcadores, 5000);
+  setInterval(atualizarMarcadores, 1000);
 });
 import { auth } from "./firebase";
 import { signOut } from "firebase/auth";
