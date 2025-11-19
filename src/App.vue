@@ -98,11 +98,21 @@ onMounted(() => {
 
   // Ler posições de todos os usuários em tempo real
   listenUsers((users) => {
+    // Remove marcadores de usuários que saíram
+    Object.keys(markers).forEach((uid) => {
+      if (!users[uid] || !users[uid].tipo) {
+        markers[uid].remove();
+        delete markers[uid];
+      }
+    });
+
     Object.keys(users).forEach((uid) => {
       const u = users[uid];
-      // Cor diferente para o próprio usuário
+      // Só mostra quem tem tipo definido
+      if (!u.tipo) return;
+
       let markerColor = "green";
-      if (u.tipo === "motorista") markerColor = "green";
+      if (u.tipo === "passageiro") markerColor = "#0093ac";
       if (uid === user.value?.uid) markerColor = "red";
 
       if (!markers[uid]) {
@@ -111,10 +121,12 @@ onMounted(() => {
         })
           .setLngLat([u.lng, u.lat])
           .addTo(map);
+        markers[uid]._color = markerColor;
       } else {
         markers[uid].setLngLat([u.lng, u.lat]);
         // Atualiza cor se necessário
         if (markers[uid]._color !== markerColor) {
+          markers[uid].getElement().style.backgroundColor = markerColor;
           markers[uid]._color = markerColor;
         }
       }
@@ -122,6 +134,17 @@ onMounted(() => {
     console.log('Usuários atualizados:', users);
   });
 });
+import { auth } from "./firebase";
+import { signOut } from "firebase/auth";
+
+async function fazerLogout() {
+  try {
+    await signOut(auth);
+    tipo.value = null;
+  } catch (e) {
+    console.error("Erro ao sair:", e);
+  }
+}
 </script>
 <template>
   <v-container class="pa-4">
@@ -133,11 +156,11 @@ onMounted(() => {
     </v-row>
 
     <v-row justify="center" class="mt-4" v-if="user && !tipo">
-      <v-btn color="blue" class="ma-2" @click="escolherTipo('motorista')">
+      <v-btn color="green" class="ma-2" @click="escolherTipo('motorista')">
         Oferecer boleia
       </v-btn>
 
-      <v-btn color="green" class="ma-2" @click="escolherTipo('passageiro')">
+      <v-btn style="background-color: #0093ac; color: #fff;" class="ma-2" @click="escolherTipo('passageiro')">
         Quero boleia
       </v-btn>
     </v-row>
@@ -146,6 +169,20 @@ onMounted(() => {
 
   <!-- MAPA FORA DO V-CONTAINER -->
   <div id="map" class="map-container"></div>
+
+  <v-row justify="center" class="mt-4" v-if="user">
+    <div>
+      <p>Logado como: {{ user.displayName }} ({{ tipo || 'Tipo não selecionado' }})</p>
+    </div>
+  </v-row>
+  <!-- botao de logoff logout sair -->
+
+  <v-row justify="center" class="mt-4" v-if="user">
+    <v-btn color="red" class="ma-2" @click="fazerLogout">
+      Sair
+    </v-btn>
+  </v-row>
+
 </template>
 
 <style>
