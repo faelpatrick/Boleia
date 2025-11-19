@@ -13,8 +13,10 @@ import {
 } from "./firebase";
 import { ref as dbRef, get } from "firebase/database";
 
+
 const user = ref(null);
 const tipo = ref(null); // "motorista" ou "passageiro"
+let atualizarMarcadores = null;
 
 let map;
 const markers = {};
@@ -49,6 +51,8 @@ function escolherTipo(t) {
       }
     }, 100);
   }
+  // Atualiza marcadores imediatamente ao trocar tipo
+  if (typeof atualizarMarcadores === "function") atualizarMarcadores();
 }
 
 // Enviar localização continuamente
@@ -106,7 +110,7 @@ onMounted(() => {
     logo: logoNavarra
   });
 
-  async function atualizarMarcadores() {
+  atualizarMarcadores = async function() {
     const snap = await get(dbRef(db, "users"));
     const users = snap.val() || {};
 
@@ -121,9 +125,9 @@ onMounted(() => {
     const agora = Date.now();
     Object.keys(users).forEach((uid) => {
       const u = users[uid];
-      // Só mostra quem tem tipo definido e está ativo (últimos 15s)
+      // Só mostra quem tem tipo definido e está ativo (últimos 60s)
       if (!u.tipo) return;
-      if (!u.lastActive || agora - u.lastActive > 15000) return;
+      if (!u.lastActive || agora - u.lastActive > 60000) return;
 
       let markerColor = "green";
       let isMotorista = false;
