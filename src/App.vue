@@ -7,8 +7,9 @@ import {
   loginGoogle,
   listenAuth,
   updateUserPos,
-  listenUsers
+  db
 } from "./firebase";
+import { ref as dbRef, get } from "firebase/database";
 
 const user = ref(null);
 const tipo = ref(null); // "motorista" ou "passageiro"
@@ -96,8 +97,10 @@ onMounted(() => {
     zoom: 14
   });
 
-  // Ler posições de todos os usuários em tempo real
-  listenUsers((users) => {
+  async function atualizarMarcadores() {
+    const snap = await get(dbRef(db, "users"));
+    const users = snap.val() || {};
+
     // Remove marcadores de usuários que saíram
     Object.keys(markers).forEach((uid) => {
       if (!users[uid] || !users[uid].tipo) {
@@ -115,24 +118,81 @@ onMounted(() => {
       if (u.tipo === "passageiro") markerColor = "#0093ac";
       if (uid === user.value?.uid) markerColor = "red";
 
+      // Extrair primeiro e último nome
+      let nome = u.displayName;
+      // Se for o usuário logado e não houver displayName salvo, usa o local
+      if (!nome && uid === user.value?.uid && user.value?.displayName) {
+        nome = user.value.displayName;
+      }
+      if (!nome) nome = "";
+      const partes = nome.trim().split(" ");
+      if (partes.length > 1) {
+        nome = partes[0] + " " + partes[partes.length - 1];
+      } else {
+        nome = partes[0];
+      }
+
+      // Criar elemento com nome acima do marker padrão
+      let wrapper, label;
       if (!markers[uid]) {
-        markers[uid] = new maplibregl.Marker({
-          color: markerColor
-        })
+        wrapper = document.createElement('div');
+        wrapper.style.display = 'flex';
+        wrapper.style.flexDirection = 'column';
+        wrapper.style.alignItems = 'center';
+        wrapper.style.pointerEvents = 'none';
+
+        label = document.createElement('span');
+        label.innerText = nome;
+        label.style.color = '#0093ac';
+        label.style.fontWeight = 'bold';
+        label.style.fontSize = '12px';
+        label.style.marginBottom = '2px';
+        label.style.background = 'white';
+        label.style.padding = '1px 6px';
+        label.style.borderRadius = '8px';
+        label.style.boxShadow = '0 1px 4px #0002';
+        label.style.pointerEvents = 'auto';
+
+        wrapper.appendChild(label);
+
+        // Cria o marker padrão
+        const marker = new maplibregl.Marker({ color: markerColor })
+          .setLngLat([u.lng, u.lat])
+          .addTo(map);
+        // Adiciona o nome acima do marker
+        marker.getElement().style.marginTop = '0px';
+        wrapper.appendChild(marker.getElement());
+
+        // Adiciona o wrapper ao mapa como marker customizado
+        markers[uid] = new maplibregl.Marker({ element: wrapper, anchor: 'bottom' })
           .setLngLat([u.lng, u.lat])
           .addTo(map);
         markers[uid]._color = markerColor;
+        markers[uid]._label = label;
       } else {
         markers[uid].setLngLat([u.lng, u.lat]);
-        // Atualiza cor se necessário
+        // Atualiza cor e nome se necessário
         if (markers[uid]._color !== markerColor) {
-          markers[uid].getElement().style.backgroundColor = markerColor;
+          // Não muda a cor do label, só do marker
+          // Precisa reconstruir o marker padrão se mudar tipo
+          const wrapper = markers[uid].getElement();
+          const oldMarker = wrapper.querySelector('.maplibregl-marker');
+          if (oldMarker) oldMarker.remove();
+          const newMarker = new maplibregl.Marker({ color: markerColor })
+            .setLngLat([u.lng, u.lat]);
+          wrapper.appendChild(newMarker.getElement());
           markers[uid]._color = markerColor;
+        }
+        if (markers[uid]._label.innerText !== nome) {
+          markers[uid]._label.innerText = nome;
         }
       }
     });
-    console.log('Usuários atualizados:', users);
-  });
+    //console.log('Usuários atualizados:', users);
+  }
+
+  atualizarMarcadores();
+  setInterval(atualizarMarcadores, 5000);
 });
 import { auth } from "./firebase";
 import { signOut } from "firebase/auth";
